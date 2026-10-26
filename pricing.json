@@ -1,0 +1,45 @@
+{
+    "currency_code": "XAF",
+    "currency_label": "XAF",
+    "services": {
+        "residential": {
+            "label": "Residential cleaning",
+            "base": 0,
+            "per_room": 4000
+        },
+        "deep": {
+            "label": "Deep cleaning",
+            "base": 0,
+            "per_room": 4000
+        },
+        "commercial": {
+            "label": "Commercial cleaning",
+            "base": 0,
+            "per_room": 4000
+        },
+        "move": {
+            "label": "Move-in / move-out cleaning",
+            "base": 0,
+            "per_room": 4000
+        },
+        "rental": {
+            "label": "Short-term rental cleaning",
+            "base": 0,
+            "per_room": 4000
+        },
+        "maintenance": {
+            "label": "Regular maintenance",
+            "base": 0,
+            "per_room": 4000
+        }
+    },
+    "extras": {
+        "Fridge cleaning": null,
+        "Laundry": null,
+        "Oven cleaning": null,
+        "Interior windows": null,
+        "Inside cabinets": null,
+        "Other extras listed in notes": null
+    },
+    "no_show_fee": null
+}
