@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 $pricing = require __DIR__ . '/config/pricing.php';
+header('X-Robots-Tag: index, follow');
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -9,8 +10,13 @@ $pricing = require __DIR__ . '/config/pricing.php';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#e7ebef">
+    <meta name="robots" content="index, follow">
     <meta name="description" content="Bexxy Care and Clean offers residential, deep, commercial, move-in and move-out, short-term rental, and regular cleaning in Ottawa and Gatineau.">
     <title>Bexxy Care and Clean — Ottawa &amp; Gatineau</title>
+    <link rel="canonical" href="https://bexxycareandclean.ca/">
+    <link rel="shortcut icon" href="image/bexxy-logo.png" type="image/x-icon">
+    <link rel="apple-touch-icon" sizes="180x180" href="image/bexxy-logo.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="image/bexxy-logo.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -35,7 +41,7 @@ $pricing = require __DIR__ . '/config/pricing.php';
         <section class="hero page-shell" id="home">
             <div class="hero-copy">
                 <div class="eyebrow"><span class="eyebrow-star" aria-hidden="true">✳</span>Clean and bright · Ottawa &amp; Gatineau</div>
-                <h1>Your space,<br><span class="headline-accent">your priority.</span></h1>
+                <h1>Your space,<br><span class="headline-accent">our priority.</span></h1>
                 <p class="hero-description">Reliable cleaning for homes, offices, and short-term rentals. Tell us what you need and we’ll help plan the right clean.</p>
                 <div class="hero-actions">
                     <a class="button button-primary" href="booking.php">Book now <span aria-hidden="true">↗</span></a>

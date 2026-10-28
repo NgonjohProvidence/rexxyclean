@@ -1,7 +1,9 @@
 (() => {
     const translations = {
         "Home": "Accueil",
-        "About": "À propos",
+        "About": "À propos","our":" notre","priority":" priorité","cleaning":" nettoyage","for":" pour","homes":" maisons","offices":" bureaux","and":" et",
+        "short-term rentals":" locations à court terme",
+        "Tell us what you need and we’ll help plan the right clean.":"Dites-nous ce qu’il vous faut et nous vous aiderons à planifier le bon service.",
         "Services": "Services",
         "Pricing": "Tarifs",
         "Contact": "Contact",
