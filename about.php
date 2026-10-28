@@ -97,6 +97,6 @@ start_secure_session();
         </div>
     </footer>
     <script src="navigation.js" defer></script>
-    <script src="language.js?v=1" defer></script>
+    <script src="language.js?v=5" defer></script>
 </body>
 </html>

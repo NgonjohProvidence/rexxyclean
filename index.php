@@ -11,7 +11,7 @@ header('X-Robots-Tag: index, follow');
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#e7ebef">
     <meta name="robots" content="index, follow">
-    <meta name="description" content="Bexxy Care and Clean offers residential, deep, commercial, move-in and move-out, short-term rental, and regular cleaning in Ottawa and Gatineau.">
+    <meta name="description" content="Bexxy Care and Clean provides home, deep, office, move-out, rental, and recurring cleaning in Ottawa and Gatineau, 24/7.">
     <title>Bexxy Care and Clean — Ottawa &amp; Gatineau</title>
     <link rel="canonical" href="https://bexxycareandclean.ca/">
     <link rel="shortcut icon" href="image/bexxy-logo.png" type="image/x-icon">
@@ -20,7 +20,7 @@ header('X-Robots-Tag: index, follow');
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="index.css">
+    <link rel="stylesheet" href="index.css?v=4">
 </head>
 <body>
     <header class="site-header">
@@ -65,7 +65,7 @@ header('X-Robots-Tag: index, follow');
         </section>
 
         <section class="trust-bar page-shell" aria-label="Our promises">
-            <p>Fast, flexible service.<br><strong>Available seven days a week.</strong></p>
+            <p>Fast, flexible service.<br><strong>Available 24 hours a day, seven days a week.</strong></p>
             <div class="trust-item"><span aria-hidden="true">✓</span> Ottawa &amp; Gatineau</div>
             <div class="trust-item"><span aria-hidden="true">7</span> Days a week</div>
             <div class="trust-item"><span aria-hidden="true">✓</span> Homes and businesses</div>
@@ -84,7 +84,7 @@ header('X-Robots-Tag: index, follow');
                     <span class="service-number">01</span>
                     <div class="service-copy">
                         <h3>Residential cleaning</h3>
-                        <p class="service-price"><?= escape_html($pricing['currency_label'] . ' ' . number_format($pricing['services']['residential']['per_room'], 0)) ?> per room</p>
+                        <p class="service-price"><?= escape_html($pricing['currency_label'] . ' ' . number_format($pricing['services']['residential']['per_hour'], 0)) ?> per cleaner-hour</p>
                         <div class="service-popover">
                             <img src="image/services/residential-cleaning.jpg" alt="Cleaners caring for a living room floor" width="700" height="467" loading="lazy">
                             <p>Keep your house or apartment fresh with cleaning tailored to your home.</p>
@@ -96,7 +96,7 @@ header('X-Robots-Tag: index, follow');
                     <span class="service-number">02</span>
                     <div class="service-copy">
                         <h3>Deep cleaning</h3>
-                        <p class="service-price"><?= escape_html($pricing['currency_label'] . ' ' . number_format($pricing['services']['deep']['per_room'], 0)) ?> per room</p>
+                        <p class="service-price"><?= escape_html($pricing['currency_label'] . ' ' . number_format($pricing['services']['deep']['per_hour'], 0)) ?> per cleaner-hour</p>
                         <div class="service-popover">
                             <img src="image/services/deep-cleaning.jpg" alt="A gloved hand scrubbing a bathroom fixture" width="700" height="1050" loading="lazy">
                             <p>A detailed clean for the areas that need extra care and attention.</p>
@@ -108,7 +108,7 @@ header('X-Robots-Tag: index, follow');
                     <span class="service-number">03</span>
                     <div class="service-copy">
                         <h3>Commercial cleaning</h3>
-                        <p class="service-price"><?= escape_html($pricing['currency_label'] . ' ' . number_format($pricing['services']['commercial']['per_room'], 0)) ?> per room</p>
+                        <p class="service-price"><?= escape_html($pricing['currency_label'] . ' ' . number_format($pricing['services']['commercial']['per_hour'], 0)) ?> per cleaner-hour</p>
                         <div class="service-popover">
                             <img src="image/services/commercial-cleaning.jpg" alt="A team cleaning a commercial dining space" width="700" height="467" loading="lazy">
                             <p>Cleaning for offices and commercial spaces to help keep your workplace tidy.</p>
@@ -120,7 +120,7 @@ header('X-Robots-Tag: index, follow');
                     <span class="service-number">04</span>
                     <div class="service-copy">
                         <h3>Move-in / move-out cleaning</h3>
-                        <p class="service-price"><?= escape_html($pricing['currency_label'] . ' ' . number_format($pricing['services']['move']['per_room'], 0)) ?> per room</p>
+                        <p class="service-price"><?= escape_html($pricing['currency_label'] . ' ' . number_format($pricing['services']['move']['per_hour'], 0)) ?> per cleaner-hour</p>
                         <div class="service-popover">
                             <img src="image/services/move-cleaning.jpg" alt="A cleaner vacuuming a bright interior" width="700" height="1050" loading="lazy">
                             <p>Get your place ready for a new arrival or leave it fresh when you move out.</p>
@@ -132,7 +132,7 @@ header('X-Robots-Tag: index, follow');
                     <span class="service-number">05</span>
                     <div class="service-copy">
                         <h3>Short-term rental cleaning</h3>
-                        <p class="service-price"><?= escape_html($pricing['currency_label'] . ' ' . number_format($pricing['services']['rental']['per_room'], 0)) ?> per room</p>
+                        <p class="service-price"><?= escape_html($pricing['currency_label'] . ' ' . number_format($pricing['services']['rental']['per_hour'], 0)) ?> per cleaner-hour</p>
                         <div class="service-popover">
                             <img src="image/services/rental-cleaning.jpg" alt="Fresh bedding being prepared for a guest" width="700" height="1050" loading="lazy">
                             <p>Cleaning for short-term rental properties, including Airbnb listings.</p>
@@ -144,7 +144,7 @@ header('X-Robots-Tag: index, follow');
                     <span class="service-number">06</span>
                     <div class="service-copy">
                         <h3>Regular maintenance</h3>
-                        <p class="service-price"><?= escape_html($pricing['currency_label'] . ' ' . number_format($pricing['services']['maintenance']['per_room'], 0)) ?> per room</p>
+                        <p class="service-price"><?= escape_html($pricing['currency_label'] . ' ' . number_format($pricing['services']['maintenance']['per_hour'], 0)) ?> per cleaner-hour</p>
                         <div class="service-popover">
                             <img src="image/services/regular-maintenance.jpg" alt="A cleaner wiping a kitchen surface" width="700" height="1050" loading="lazy">
                             <p>Choose weekly or monthly visits to keep your space in good shape.</p>
@@ -175,10 +175,70 @@ header('X-Robots-Tag: index, follow');
                 </a>
                 <a class="step" href="pricing.php" data-page-transition aria-label="See cleaning prices and how estimates are calculated">
                     <span class="step-number">03</span>
-                    <div><h3>Review the estimate</h3><p>See per-room pricing and how extras are quoted.</p></div>
+                    <div><h3>Review the estimate</h3><p>See hourly rates and how extras are quoted.</p></div>
                     <span class="step-symbol" aria-hidden="true">↗</span>
                 </a>
             </div>
+        </section>
+
+        <section class="content-section home-service-guide page-shell" aria-labelledby="home-service-guide-heading">
+            <div class="eyebrow">Cleaning for real-life spaces</div>
+            <h2 id="home-service-guide-heading">The right clean<br><span class="headline-accent">for your space.</span></h2>
+            <p class="home-section-intro">From lived-in homes and busy workplaces to rental turnovers and moving days, Bexxy Care and Clean serves Ottawa and Gatineau. Choose the type of cleaning you need, then tell us which rooms, priorities, and preferred date to consider.</p>
+            <div class="content-card-grid">
+                <article class="content-card">
+                    <span class="about-card-label">At home</span>
+                    <h3>Make home feel fresh</h3>
+                    <p>Request residential cleaning for a house or apartment, a deeper clean for areas that need extra attention, or regular maintenance on a weekly or monthly schedule.</p>
+                </article>
+                <article class="content-card">
+                    <span class="about-card-label">At work</span>
+                    <h3>Care for your workplace</h3>
+                    <p>Arrange commercial cleaning for an office or business space. Share the areas to cover and the schedule you have in mind so the requested service can be discussed.</p>
+                </article>
+                <article class="content-card">
+                    <span class="about-card-label">Between stays</span>
+                    <h3>Prepare for a new arrival</h3>
+                    <p>Request a short-term rental clean between guests, or cleaning before or after a move. Include the timing and any priorities that will help describe the space.</p>
+                </article>
+            </div>
+        </section>
+
+        <section class="content-section home-faq page-shell" aria-labelledby="home-faq-heading">
+            <div class="eyebrow">Helpful details</div>
+            <h2 id="home-faq-heading">Before you<br><span class="headline-accent">send a request.</span></h2>
+            <div class="home-faq-list">
+                <details>
+                    <summary>Which areas does Bexxy serve?</summary>
+                    <p>Bexxy Care and Clean serves Ottawa and Gatineau. Include your service location in the booking request so the team can discuss availability.</p>
+                </details>
+                <details>
+                    <summary>Is cleaning available 24/7?</summary>
+                    <p>Yes. Service is available 24 hours a day, seven days a week. Send your preferred date and arrival time; Bexxy will confirm the appointment with you.</p>
+                </details>
+                <details>
+                    <summary>Can I ask for particular rooms or extra tasks?</summary>
+                    <p>Yes. Describe the rooms and priorities in your request. Optional tasks such as oven, fridge, laundry, or interior-window cleaning are discussed and quoted separately.</p>
+                </details>
+                <details>
+                    <summary>Does the booking form confirm my appointment?</summary>
+                    <p>No. The form sends a cleaning request, not a confirmed appointment or payment. Bexxy will discuss the scope, availability, and final price with you first.</p>
+                </details>
+            </div>
+            <a class="text-link home-faq-pricing" href="pricing.php">See how estimates work <span aria-hidden="true">↗</span></a>
+        </section>
+
+        <section class="content-contact home-contact page-shell" id="contact" aria-labelledby="home-contact-heading">
+            <div>
+                <div class="eyebrow">Serving Ottawa and Gatineau · available 24/7</div>
+                <h2 id="home-contact-heading">Let’s talk about<br>your cleaning needs.</h2>
+                <p>Call or email Bexxy Care and Clean with a question, or send a booking request with details about your space.</p>
+                <div class="home-contact-links">
+                    <a href="tel:+16137102787" aria-label="Call Bexxy Care and Clean at 613-710-2787">613-710-2787</a>
+                    <a href="mailto:bexxycare.and.clean26@gmail.com">bexxycare.and.clean26@gmail.com</a>
+                </div>
+            </div>
+            <a class="button button-dark" href="booking.php">Request a cleaning <span aria-hidden="true">↗</span></a>
         </section>
 
     </main>
@@ -191,12 +251,13 @@ header('X-Robots-Tag: index, follow');
             </div>
             <section class="footer-column" aria-labelledby="footer-contact-heading">
                 <h2 id="footer-contact-heading">Contact</h2>
+                <a href="tel:+16137102787">613-710-2787</a>
                 <a href="mailto:bexxycare.and.clean26@gmail.com">bexxycare.and.clean26@gmail.com</a>
             </section>
             <section class="footer-column" aria-labelledby="footer-hours-heading">
-                <h2 id="footer-hours-heading">Opening hours</h2>
-                <p>Every day</p>
-                <p><time datetime="06:00">6:00 a.m.</time> – <time datetime="19:00">7:00 p.m.</time></p>
+                <h2 id="footer-hours-heading">Service availability</h2>
+                <p>24 hours a day</p>
+                <p>Seven days a week</p>
                 <p>Ottawa &amp; Gatineau</p>
             </section>
         </div>
@@ -206,6 +267,6 @@ header('X-Robots-Tag: index, follow');
         </div>
     </footer>
     <script src="navigation.js" defer></script>
-    <script src="language.js?v=1" defer></script>
+    <script src="language.js?v=5" defer></script>
 </body>
 </html>

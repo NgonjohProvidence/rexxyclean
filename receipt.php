@@ -14,7 +14,7 @@ if (!$booking_id || $booking_id < 1) {
 try {
     $pdo = require __DIR__ . '/config/database.php';
     $statement = $pdo->prepare(
-        'SELECT id, service, rooms, preferred_date, arrival_time, extra_services, estimated_total, currency_code, full_name, email, phone, service_address, notes, status, created_at
+        'SELECT id, service, rooms, estimated_hours, cleaner_count, preferred_date, arrival_time, extra_services, estimated_total, currency_code, full_name, email, phone, service_address, notes, status, created_at
          FROM booking_requests
          WHERE id = :id
          LIMIT 1'
@@ -83,7 +83,8 @@ if ($receipt_language === 'fr') {
         'DÉTAILS DU SERVICE',
         'Service : ' . $service_name,
         'Pièces / zones : ' . $booking['rooms'],
-        'Estimation : ' . ($booking['estimated_total'] === null ? 'À déterminer' : $booking['currency_code'] . ' ' . number_format((float) $booking['estimated_total'], 0)),
+        ...($booking['estimated_hours'] === null ? [] : ['Durée estimée : ' . rtrim(rtrim(number_format((float) $booking['estimated_hours'], 1), '0'), '.') . ' h avec ' . $booking['cleaner_count'] . ' préposé(s)']),
+        'Estimation : ' . ($booking['estimated_total'] === null ? 'À déterminer' : $booking['currency_code'] . ' ' . number_format((float) $booking['estimated_total'], $booking['currency_code'] === 'CAD' ? 2 : 0)),
         'Date souhaitée : ' . date('d/m/Y', strtotime((string) $booking['preferred_date'])),
         'Heure d’arrivée souhaitée : ' . date('H\hi', strtotime((string) $booking['arrival_time'])),
         'Services supplémentaires : ' . ($receipt_extras ? implode(', ', $receipt_extras) : 'Aucun'),
@@ -105,7 +106,8 @@ if ($receipt_language === 'fr') {
         'SERVICE DETAILS',
         'Service: ' . $booking['service'],
         'Rooms / areas: ' . $booking['rooms'],
-        'Estimated total: ' . ($booking['estimated_total'] === null ? 'To be quoted' : $booking['currency_code'] . ' ' . number_format((float) $booking['estimated_total'], 0)),
+        ...($booking['estimated_hours'] === null ? [] : ['Estimated duration: ' . rtrim(rtrim(number_format((float) $booking['estimated_hours'], 1), '0'), '.') . ' hours with ' . $booking['cleaner_count'] . ' cleaner(s)']),
+        'Estimated total: ' . ($booking['estimated_total'] === null ? 'To be quoted' : $booking['currency_code'] . ' ' . number_format((float) $booking['estimated_total'], $booking['currency_code'] === 'CAD' ? 2 : 0)),
         'Preferred date: ' . date('F j, Y', strtotime((string) $booking['preferred_date'])),
         'Preferred arrival time: ' . date('g:i a', strtotime((string) $booking['arrival_time'])),
         'Extra services: ' . ($extra_services ? implode(', ', $extra_services) : 'None selected'),

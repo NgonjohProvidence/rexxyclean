@@ -39,7 +39,7 @@ start_secure_session();
 
         <section>
             <h2>Information you provide</h2>
-            <p>The booking form asks for your name, email address, phone number, service address, cleaning service, room or area count, preferred date and arrival time, optional extras, and notes.</p>
+            <p>The booking form asks for your name, email address, phone number, service address, cleaning service, room or area count, estimated cleaning duration and team size, preferred date and arrival time, optional extras, and notes.</p>
         </section>
         <section>
             <h2>How it is used</h2>
@@ -66,6 +66,6 @@ start_secure_session();
         </div>
     </footer>
     <script src="navigation.js" defer></script>
-    <script src="language.js?v=1" defer></script>
+    <script src="language.js?v=5" defer></script>
 </body>
 </html>

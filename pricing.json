@@ -1,36 +1,30 @@
 {
-    "currency_code": "XAF",
-    "currency_label": "XAF",
+    "currency_code": "CAD",
+    "currency_label": "CAD",
     "services": {
         "residential": {
             "label": "Residential cleaning",
-            "base": 0,
-            "per_room": 4000
+            "per_hour": 45
         },
         "deep": {
             "label": "Deep cleaning",
-            "base": 0,
-            "per_room": 4000
+            "per_hour": 55
         },
         "commercial": {
             "label": "Commercial cleaning",
-            "base": 0,
-            "per_room": 4000
+            "per_hour": 50
         },
         "move": {
             "label": "Move-in / move-out cleaning",
-            "base": 0,
-            "per_room": 4000
+            "per_hour": 55
         },
         "rental": {
             "label": "Short-term rental cleaning",
-            "base": 0,
-            "per_room": 4000
+            "per_hour": 45
         },
         "maintenance": {
             "label": "Regular maintenance",
-            "base": 0,
-            "per_room": 4000
+            "per_hour": 40
         }
     },
     "extras": {

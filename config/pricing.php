@@ -24,12 +24,10 @@ foreach (['residential', 'deep', 'commercial', 'move', 'rental', 'maintenance'] 
     $service = $pricing['services'][$service_slug] ?? null;
     if (
         !is_array($service)
-        || !isset($service['label'], $service['base'], $service['per_room'])
+        || !isset($service['label'], $service['per_hour'])
         || !is_string($service['label'])
-        || !is_int($service['base'])
-        || !is_int($service['per_room'])
-        || $service['base'] < 0
-        || $service['per_room'] < 0
+        || !is_int($service['per_hour'])
+        || $service['per_hour'] < 0
     ) {
         throw new RuntimeException('Pricing configuration has an invalid service rate: ' . $service_slug);
     }

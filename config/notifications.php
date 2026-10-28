@@ -65,9 +65,14 @@ function send_booking_notifications(array $booking, string $language): array
     $reference = '#' . (int) $booking['id'];
     $date = date($is_french ? 'd/m/Y' : 'F j, Y', strtotime((string) $booking['preferred_date']));
     $time = date($is_french ? 'H\hi' : 'g:i a', strtotime((string) $booking['arrival_time']));
+    $hours = rtrim(rtrim(number_format((float) $booking['estimated_hours'], 1), '0'), '.');
+    $total = (string) $booking['currency_code'] . ' ' . number_format(
+        (float) $booking['estimated_total'],
+        $booking['currency_code'] === 'CAD' ? 2 : 0
+    );
     $customer_message = $is_french
-        ? "Bonjour " . $booking['full_name'] . ",\n\nNous avons bien reçu votre demande de nettoyage " . $reference . ".\n\nService : " . $booking['service'] . "\nDate souhaitée : " . $date . "\nHeure d’arrivée souhaitée : " . $time . "\n\nCeci est un accusé de réception, pas une confirmation de rendez-vous. Nous vous contacterons pour confirmer les disponibilités et le prix. Votre estimation n’est pas une facture.\n\nVous pouvez télécharger le reçu PDF depuis la page de confirmation dans le navigateur utilisé pour envoyer la demande.\n\nBexxy Care and Clean"
-        : "Hello " . $booking['full_name'] . ",\n\nWe received your cleaning request " . $reference . ".\n\nService: " . $booking['service'] . "\nPreferred date: " . $date . "\nPreferred arrival time: " . $time . "\n\nThis is an acknowledgement, not a confirmed appointment. We will contact you to confirm availability and pricing. Your estimate is not an invoice.\n\nYou can download the PDF receipt from the confirmation page in the browser you used to submit the request.\n\nBexxy Care and Clean";
+        ? "Bonjour " . $booking['full_name'] . ",\n\nNous avons bien reçu votre demande de nettoyage " . $reference . ".\n\nService : " . $booking['service'] . "\nDurée estimée : " . $hours . " h avec " . $booking['cleaner_count'] . " préposé(s)\nEstimation : " . $total . "\nDate souhaitée : " . $date . "\nHeure d’arrivée souhaitée : " . $time . "\n\nCeci est un accusé de réception, pas une confirmation de rendez-vous. Nous vous contacterons pour confirmer les disponibilités et le prix. Votre estimation n’est pas une facture.\n\nVous pouvez télécharger le reçu PDF depuis la page de confirmation dans le navigateur utilisé pour envoyer la demande.\n\nBexxy Care and Clean"
+        : "Hello " . $booking['full_name'] . ",\n\nWe received your cleaning request " . $reference . ".\n\nService: " . $booking['service'] . "\nEstimated duration: " . $hours . " hours with " . $booking['cleaner_count'] . " cleaner(s)\nEstimate: " . $total . "\nPreferred date: " . $date . "\nPreferred arrival time: " . $time . "\n\nThis is an acknowledgement, not a confirmed appointment. We will contact you to confirm availability and pricing. Your estimate is not an invoice.\n\nYou can download the PDF receipt from the confirmation page in the browser you used to submit the request.\n\nBexxy Care and Clean";
     $customer_subject = $is_french
         ? 'Demande de nettoyage recue ' . $reference
         : 'Cleaning request received ' . $reference;
@@ -81,6 +86,8 @@ function send_booking_notifications(array $booking, string $language): array
         $admin_message = "A new cleaning request was submitted.\n\n"
             . "Reference: " . $reference . "\n"
             . "Service: " . $booking['service'] . "\n"
+            . "Estimated duration: " . $hours . " hours with " . $booking['cleaner_count'] . " cleaner(s)\n"
+            . "Estimate: " . $total . "\n"
             . "Preferred date: " . $date . "\n"
             . "Preferred arrival time: " . $time . "\n\n"
             . "Review the request in the private Bexxy booking dashboard.";

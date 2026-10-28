@@ -21,21 +21,15 @@ $service_options = array_map(
     static fn (array $service): string => $service['label'],
     $pricing['services']
 );
-$arrival_times = [
-    '06:00' => '6:00 a.m.',
-    '07:00' => '7:00 a.m.',
-    '08:00' => '8:00 a.m.',
-    '09:00' => '9:00 a.m.',
-    '10:00' => '10:00 a.m.',
-    '11:00' => '11:00 a.m.',
-    '12:00' => '12:00 p.m.',
-    '13:00' => '1:00 p.m.',
-    '14:00' => '2:00 p.m.',
-    '15:00' => '3:00 p.m.',
-    '16:00' => '4:00 p.m.',
-    '17:00' => '5:00 p.m.',
-    '18:00' => '6:00 p.m.',
-];
+$arrival_times = [];
+for ($hour = 0; $hour < 24; $hour++) {
+    $value = sprintf('%02d:00', $hour);
+    $arrival_time = DateTimeImmutable::createFromFormat('!H:i', $value);
+    if ($arrival_time === false) {
+        throw new RuntimeException('Could not generate an arrival-time option.');
+    }
+    $arrival_times[$value] = $arrival_time->format('g:i a');
+}
 $extra_options = [
     'Fridge cleaning',
     'Laundry',
@@ -47,6 +41,8 @@ $extra_options = [
 $form = [
     'service' => '',
     'rooms' => '',
+    'estimated_hours' => '',
+    'cleaners' => '1',
     'preferred_date' => '',
     'arrival_time' => '',
     'full_name' => '',
@@ -115,6 +111,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errors[] = 'Enter a room or area count from 1 to 100.';
     }
 
+    $estimated_hours = preg_match('/^\d+(?:\.\d)?$/D', $form['estimated_hours'])
+        ? (float) $form['estimated_hours']
+        : false;
+    if (
+        $estimated_hours === false
+        || $estimated_hours < 0.5
+        || $estimated_hours > 24
+        || abs($estimated_hours * 2 - round($estimated_hours * 2)) > 1.0e-9
+    ) {
+        $errors[] = 'Enter an estimated duration from 0.5 to 24 hours in half-hour increments.';
+    }
+
+    $cleaners = filter_var($form['cleaners'], FILTER_VALIDATE_INT, [
+        'options' => ['min_range' => 1, 'max_range' => 10],
+    ]);
+    if ($cleaners === false) {
+        $errors[] = 'Choose a team size from 1 to 10 cleaners.';
+    }
+
     $date = DateTimeImmutable::createFromFormat('!Y-m-d', $form['preferred_date']);
     $date_errors = DateTimeImmutable::getLastErrors();
     if (
@@ -127,7 +142,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if (!isset($arrival_times[$form['arrival_time']])) {
-        $errors[] = 'Choose an arrival time between 6:00 a.m. and 6:00 p.m.';
+        $errors[] = 'Choose a valid arrival time.';
     } elseif ($date && $date->format('Y-m-d') === (new DateTimeImmutable('today'))->format('Y-m-d')) {
         $requested_arrival = DateTimeImmutable::createFromFormat(
             '!Y-m-d H:i',
@@ -159,18 +174,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (!$errors) {
         try {
-            $estimated_total = $pricing['services'][$form['service']]['base']
-                + ($pricing['services'][$form['service']]['per_room'] * $rooms);
+            $estimated_total = round(
+                $pricing['services'][$form['service']]['per_hour'] * $estimated_hours * $cleaners,
+                2
+            );
             $pdo = require __DIR__ . '/config/database.php';
             $statement = $pdo->prepare(
                 'INSERT INTO booking_requests
-                    (service, rooms, preferred_date, arrival_time, extra_services, estimated_total, currency_code, full_name, email, phone, service_address, notes)
+                    (service, rooms, estimated_hours, cleaner_count, preferred_date, arrival_time, extra_services, estimated_total, currency_code, full_name, email, phone, service_address, notes)
                  VALUES
-                    (:service, :rooms, :preferred_date, :arrival_time, :extra_services, :estimated_total, :currency_code, :full_name, :email, :phone, :service_address, :notes)'
+                    (:service, :rooms, :estimated_hours, :cleaner_count, :preferred_date, :arrival_time, :extra_services, :estimated_total, :currency_code, :full_name, :email, :phone, :service_address, :notes)'
             );
             $statement->execute([
                 ':service' => $service_options[$form['service']],
                 ':rooms' => $rooms,
+                ':estimated_hours' => $estimated_hours,
+                ':cleaner_count' => $cleaners,
                 ':preferred_date' => $form['preferred_date'],
                 ':arrival_time' => $form['arrival_time'] . ':00',
                 ':extra_services' => json_encode($selected_extras, JSON_THROW_ON_ERROR),
@@ -185,6 +204,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $booking_details = [
                 'id' => (int) $pdo->lastInsertId(),
                 'service' => $service_options[$form['service']],
+                'estimated_hours' => $estimated_hours,
+                'cleaner_count' => $cleaners,
+                'estimated_total' => $estimated_total,
+                'currency_code' => $pricing['currency_code'],
                 'preferred_date' => $form['preferred_date'],
                 'arrival_time' => $form['arrival_time'] . ':00',
                 'full_name' => $form['full_name'],
@@ -242,7 +265,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="booking-heading">
             <div class="eyebrow"><span class="eyebrow-star" aria-hidden="true">✳</span> Ottawa &amp; Gatineau</div>
             <h1>Let’s plan your<br><span class="headline-accent">next clean.</span></h1>
-            <p>Share a few details about the space and your preferred time. We’ll follow up to confirm availability and your booking.</p>
+            <p>Share a few details about the space and your preferred time. Service is available 24/7; we’ll follow up to confirm your requested appointment.</p>
         </div>
 
         <form class="booking-form" id="booking-form" method="post" action="booking.php">
@@ -299,28 +322,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <span>Number of rooms / areas <span aria-hidden="true">*</span></span>
                         <input id="room-count" name="rooms" type="number" min="1" max="100" inputmode="numeric" placeholder="For example, 5" value="<?= escape_html($form['rooms']) ?>" required>
                     </label>
+                    <label class="form-field" for="estimated-hours">
+                        <span>Estimated cleaning duration (hours) <span aria-hidden="true">*</span></span>
+                        <input id="estimated-hours" name="estimated_hours" type="number" min="0.5" max="24" step="0.5" inputmode="decimal" placeholder="For example, 2.5" value="<?= escape_html($form['estimated_hours']) ?>" required>
+                    </label>
+                    <label class="form-field" for="cleaner-count">
+                        <span>Number of cleaners <span aria-hidden="true">*</span></span>
+                        <input id="cleaner-count" name="cleaners" type="number" min="1" max="10" inputmode="numeric" value="<?= escape_html($form['cleaners']) ?>" required>
+                    </label>
                     <label class="form-field" for="booking-date">
                         <span>Preferred date <span aria-hidden="true">*</span></span>
                         <input id="booking-date" name="preferred_date" type="date" value="<?= escape_html($form['preferred_date']) ?>" required>
                     </label>
-                    <label class="form-field" for="arrival-time">
-                        <span>Preferred arrival time <span aria-hidden="true">*</span></span>
+                    <div class="form-field">
+                        <label for="arrival-time">Preferred arrival time <span aria-hidden="true">*</span></label>
                         <select id="arrival-time" name="arrival_time" required>
                             <option value="">Choose a time</option>
                             <?php foreach ($arrival_times as $value => $label): ?>
                                 <option value="<?= escape_html($value) ?>" <?= $form['arrival_time'] === $value ? 'selected' : '' ?>><?= escape_html($label) ?></option>
                             <?php endforeach; ?>
                         </select>
-                    </label>
+                        <small class="form-field-hint">Service is available 24/7. Requested appointment times are confirmed by Bexxy.</small>
+                    </div>
                 </div>
             </section>
-            <!-- <section class="price-estimate" aria-labelledby="estimate-heading" aria-live="polite">
+            <section class="price-estimate" aria-labelledby="estimate-heading" aria-live="polite">
                 <div>
                     <h2 id="estimate-heading">Estimated total</h2>
-                    <p id="estimate-value">Select a service and room count to see an estimate.</p>
+                    <p id="estimate-value">Select a service, duration, and team size to see an estimate.</p>
                 </div>
-                <p class="estimate-note">The displayed per-room rate applies. Extras are quoted separately and aren’t included. Bexxy will confirm the final price and availability before the appointment is booked.</p>
-            </section> -->
+                <p class="estimate-note">Rates are per cleaner-hour. The estimate uses your selected duration and team size; extras are quoted separately. Bexxy will confirm the final price and availability before the appointment is booked.</p>
+            </section>
 
             <fieldset class="booking-group extras-group">
                 <legend class="booking-group-heading">
@@ -382,7 +414,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <script>
         const serviceSelect = document.querySelector("#service-type");
-        const roomCount = document.querySelector("#room-count");
+        const estimatedHours = document.querySelector("#estimated-hours");
+        const cleanerCount = document.querySelector("#cleaner-count");
         const estimateValue = document.querySelector("#estimate-value");
         const requestedService = new URLSearchParams(window.location.search).get("service");
         const serviceOptions = {
@@ -398,21 +431,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             const service = pricing.services[serviceSelect.value];
-            const rooms = Number.parseInt(roomCount.value, 10);
-            if (!service || !Number.isInteger(rooms) || rooms < 1 || rooms > 100) {
-                estimateValue.textContent = "Select a service and room count to see an estimate.";
+            const hours = Number.parseFloat(estimatedHours.value);
+            const cleaners = Number.parseInt(cleanerCount.value, 10);
+            if (
+                !service
+                || !Number.isFinite(hours)
+                || hours < 0.5
+                || hours > 24
+                || !Number.isInteger(hours * 2)
+                || !Number.isInteger(cleaners)
+                || cleaners < 1
+                || cleaners > 10
+            ) {
+                estimateValue.textContent = "Select a service, duration, and team size to see an estimate.";
                 return;
             }
 
-            const total = service.base + service.per_room * rooms;
-            estimateValue.textContent = `${pricing.currency_label} ${new Intl.NumberFormat("en").format(total)}`;
+            const total = service.per_hour * hours * cleaners;
+            estimateValue.textContent = `${pricing.currency_label} ${new Intl.NumberFormat("en-CA", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(total)}`;
         }
 
         if (requestedService && serviceOptions[requestedService] && !serviceSelect.value) {
             serviceSelect.value = serviceOptions[requestedService];
         }
         serviceSelect.addEventListener("change", updateEstimate);
-        roomCount.addEventListener("input", updateEstimate);
+        estimatedHours.addEventListener("input", updateEstimate);
+        cleanerCount.addEventListener("input", updateEstimate);
         updateEstimate();
 
         const today = new Date();
@@ -425,6 +469,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     </script>
     <script src="navigation.js" defer></script>
-    <script src="language.js?v=1" defer></script>
+    <script src="language.js?v=5" defer></script>
 </body>
 </html>
