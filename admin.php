@@ -196,7 +196,7 @@ if (!empty($_SESSION['admin_logged_in'])) {
         }
         $total_pages = max(1, (int) ceil($total / $page_size));
         $page = min($page, $total_pages);
-        $booking_sql = 'SELECT id, service, rooms, preferred_date, arrival_time, extra_services, estimated_total, currency_code, full_name, email, phone, service_address, notes, internal_notes, status, created_at
+        $booking_sql = 'SELECT id, service, rooms, estimated_hours, cleaner_count, preferred_date, arrival_time, extra_services, estimated_total, currency_code, full_name, email, phone, service_address, notes, internal_notes, status, created_at
                         FROM booking_requests';
         if ($status_filter !== 'all') {
             $booking_sql .= ' WHERE status = :status';
@@ -314,7 +314,10 @@ $csrf_token = new_csrf_token();
                             <dl class="admin-details">
                                 <div><dt>Service</dt><dd><?= escape_html((string) $booking['service']) ?></dd></div>
                                 <div><dt>Rooms / areas</dt><dd><?= (int) $booking['rooms'] ?></dd></div>
-                                <div><dt>Estimated total</dt><dd><?= $booking['estimated_total'] === null ? 'To be quoted' : escape_html((string) $booking['currency_code'] . ' ' . number_format((float) $booking['estimated_total'], 0)) ?></dd></div>
+                                <?php if ($booking['estimated_hours'] !== null): ?>
+                                    <div><dt>Estimated duration</dt><dd><?= escape_html(rtrim(rtrim(number_format((float) $booking['estimated_hours'], 1), '0'), '.')) ?> hours with <?= (int) $booking['cleaner_count'] ?> cleaner(s)</dd></div>
+                                <?php endif; ?>
+                                <div><dt>Estimated total</dt><dd><?= $booking['estimated_total'] === null ? 'To be quoted' : escape_html((string) $booking['currency_code'] . ' ' . number_format((float) $booking['estimated_total'], $booking['currency_code'] === 'CAD' ? 2 : 0)) ?></dd></div>
                                 <div><dt>Preferred date</dt><dd><?= escape_html(date('F j, Y', strtotime((string) $booking['preferred_date']))) ?></dd></div>
                                 <div><dt>Arrival time</dt><dd><?= escape_html(date('g:i a', strtotime((string) $booking['arrival_time']))) ?></dd></div>
                                 <div><dt>Email</dt><dd><a href="mailto:<?= escape_html((string) $booking['email']) ?>"><?= escape_html((string) $booking['email']) ?></a></dd></div>

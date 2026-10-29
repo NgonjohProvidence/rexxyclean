@@ -11,7 +11,7 @@ $pricing = require __DIR__ . '/config/pricing.php';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#e7ebef">
-    <meta name="description" content="See Bexxy's per-room cleaning estimates and learn how extras are quoted.">
+    <meta name="description" content="See Bexxy's hourly cleaning estimates and learn how extras are quoted.">
     <title>Cleaning prices — Bexxy Care and Clean</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -35,21 +35,21 @@ $pricing = require __DIR__ . '/config/pricing.php';
 
     <main class="content-page page-shell">
         <section class="content-hero">
-            <div class="eyebrow"><span class="eyebrow-star" aria-hidden="true">✳</span> Straightforward estimates</div>
+            <div class="eyebrow"><span class="eyebrow-star" aria-hidden="true">✳</span> Hourly estimates</div>
             <h1>Know how your<br><span class="headline-accent">estimate adds up.</span></h1>
-            <p>Cleaning estimates start with the number of rooms or areas you request. Select a service and room count in the booking form to see an estimate before sending your request.</p>
+            <p>Each service has an estimated rate per cleaner-hour. Choose the cleaning duration and team size in the booking form to see an estimate before sending your request.</p>
             <a class="button button-primary" href="booking.php">Get an estimate <span aria-hidden="true">↗</span></a>
         </section>
 
         <section class="content-section" aria-labelledby="pricing-heading">
-            <div class="eyebrow">Per-room estimates</div>
+            <div class="eyebrow">CAD per cleaner-hour</div>
             <h2 id="pricing-heading">One clear starting<br><span class="headline-accent">point for each service.</span></h2>
             <div class="pricing-grid">
                 <?php foreach ($pricing['services'] as $slug => $service): ?>
                     <article class="pricing-card">
                         <h3><?= escape_html($service['label']) ?></h3>
-                        <p class="pricing-amount"><?= escape_html($pricing['currency_label']) ?> <?= number_format($service['per_room'], 0) ?><span> / room</span></p>
-                        <p><?= $service['base'] > 0 ? escape_html($pricing['currency_label'] . ' ' . number_format($service['base'], 0) . ' base fee, plus per-room rate.') : 'No additional base fee.' ?></p>
+                        <p class="pricing-amount"><?= escape_html($pricing['currency_label']) ?> <?= number_format($service['per_hour'], 2) ?><span> / cleaner-hour</span></p>
+                        <p>Preliminary estimate; final pricing depends on the scope and is confirmed by Bexxy.</p>
                         <a class="text-link" href="booking.php?service=<?= rawurlencode((string) $slug) ?>">Request this service <span aria-hidden="true">↗</span></a>
                     </article>
                 <?php endforeach; ?>
@@ -62,10 +62,10 @@ $pricing = require __DIR__ . '/config/pricing.php';
                 <h2 id="pricing-formula-heading">A simple<br><span class="headline-accent">calculation.</span></h2>
             </div>
             <div class="content-copy">
-                <p><strong>Estimate = service base fee + (per-room rate × rooms).</strong></p>
-                <p>For example, 3 rooms at <?= escape_html($pricing['currency_label']) ?> <?= number_format($pricing['services']['deep']['per_room'], 0) ?> per room gives an estimated service subtotal of <?= escape_html($pricing['currency_label']) ?> <?= number_format($pricing['services']['deep']['base'] + 3 * $pricing['services']['deep']['per_room'], 0) ?> before optional extras.</p>
+                <p><strong>Estimate = hourly rate × estimated duration × number of cleaners.</strong></p>
+                <p>For example, 2.5 hours with 2 cleaners at <?= escape_html($pricing['currency_label']) ?> <?= number_format($pricing['services']['deep']['per_hour'], 2) ?> per cleaner-hour gives an estimated service subtotal of <?= escape_html($pricing['currency_label']) ?> <?= number_format(2.5 * 2 * $pricing['services']['deep']['per_hour'], 2) ?> before optional extras.</p>
                 <p>Fridge cleaning, laundry, oven cleaning, interior windows, inside cabinets, and other requested extras are quoted separately. Nothing is added for an extra until the price is discussed with you.</p>
-                <p>The estimate is not a final quote or appointment confirmation. Bexxy will confirm scope, availability, and the final price before the service is booked. No no-show or lateness fee is currently set.</p>
+                <p>Rates are preliminary estimates, not an official market standard or a final quote. Bexxy will confirm scope, availability, and the final price before the service is booked. No no-show or lateness fee is currently set.</p>
             </div>
         </section>
     </main>
@@ -77,6 +77,6 @@ $pricing = require __DIR__ . '/config/pricing.php';
         </div>
     </footer>
     <script src="navigation.js" defer></script>
-    <script src="language.js?v=1" defer></script>
+    <script src="language.js?v=5" defer></script>
 </body>
 </html>
