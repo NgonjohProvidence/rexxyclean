@@ -181,9 +181,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo = require __DIR__ . '/config/database.php';
             $statement = $pdo->prepare(
                 'INSERT INTO booking_requests
-                    (service, rooms, estimated_hours, cleaner_count, preferred_date, arrival_time, extra_services, estimated_total, currency_code, full_name, email, phone, service_address, notes)
+                    (service, rooms, estimated_hours, cleaner_count, preferred_date, arrival_time, extra_services, estimated_total, currency_code, full_name, email, phone, service_address, notes, internal_notes)
                  VALUES
-                    (:service, :rooms, :estimated_hours, :cleaner_count, :preferred_date, :arrival_time, :extra_services, :estimated_total, :currency_code, :full_name, :email, :phone, :service_address, :notes)'
+                    (:service, :rooms, :estimated_hours, :cleaner_count, :preferred_date, :arrival_time, :extra_services, :estimated_total, :currency_code, :full_name, :email, :phone, :service_address, :notes, :internal_notes)'
             );
             $statement->execute([
                 ':service' => $service_options[$form['service']],
@@ -200,6 +200,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ':phone' => $form['phone'],
                 ':service_address' => $form['address'],
                 ':notes' => $form['notes'],
+                ':internal_notes' => '',
             ]);
             $booking_details = [
                 'id' => (int) $pdo->lastInsertId(),
