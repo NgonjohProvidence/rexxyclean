@@ -43,7 +43,7 @@ start_secure_session();
         </section>
         <section>
             <h2>How it is used</h2>
-            <p>Bexxy uses these details to review and respond to your cleaning request, discuss availability, and coordinate the requested service. Submitting a form sends a request only; it does not confirm an appointment or make a payment.</p>
+            <p>Bexxy uses these details to review and respond to your cleaning request, discuss availability, and coordinate the requested service. Booking details are also sent to Bexxy's configured business notification email, which may forward them to another inbox. Submitting a form sends a request only; it does not confirm an appointment or make a payment.</p>
         </section>
         <section>
             <h2>Storage and access</h2>

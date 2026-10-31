@@ -85,11 +85,18 @@ function send_booking_notifications(array $booking, string $language): array
         $admin_subject = 'New cleaning request ' . $reference;
         $admin_message = "A new cleaning request was submitted.\n\n"
             . "Reference: " . $reference . "\n"
+            . "Customer name: " . $booking['full_name'] . "\n"
+            . "Customer email: " . $booking['email'] . "\n"
+            . "Customer phone: " . $booking['phone'] . "\n"
+            . "Service address: " . $booking['service_address'] . "\n\n"
             . "Service: " . $booking['service'] . "\n"
+            . "Rooms / areas: " . $booking['rooms'] . "\n"
             . "Estimated duration: " . $hours . " hours with " . $booking['cleaner_count'] . " cleaner(s)\n"
             . "Estimate: " . $total . "\n"
             . "Preferred date: " . $date . "\n"
-            . "Preferred arrival time: " . $time . "\n\n"
+            . "Preferred arrival time: " . $time . "\n"
+            . "Extras: " . ($booking['extra_services'] ? implode(', ', $booking['extra_services']) : 'None') . "\n"
+            . "Customer notes: " . ($booking['notes'] !== '' ? $booking['notes'] : 'None') . "\n\n"
             . "Review the request in the private Bexxy booking dashboard.";
         $admin_sent = send_booking_email($admin_email, $admin_subject, $admin_message, $from_email);
     } else {

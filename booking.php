@@ -211,8 +211,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'currency_code' => $pricing['currency_code'],
                 'preferred_date' => $form['preferred_date'],
                 'arrival_time' => $form['arrival_time'] . ':00',
+                'rooms' => $rooms,
+                'extra_services' => $selected_extras,
                 'full_name' => $form['full_name'],
                 'email' => $form['email'],
+                'phone' => $form['phone'],
+                'service_address' => $form['address'],
+                'notes' => $form['notes'],
             ];
             $booking_language = posted_string('language') === 'fr' ? 'fr' : 'en';
             $email_results = send_booking_notifications($booking_details, $booking_language);
