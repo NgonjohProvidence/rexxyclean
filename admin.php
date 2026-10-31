@@ -4,11 +4,13 @@ declare(strict_types=1);
 require_once __DIR__ . '/config/security.php';
 start_secure_session();
 
+$admin_must_change_password = false;
 if (isset($_SESSION['admin_last_activity']) && time() - (int) $_SESSION['admin_last_activity'] > 1800) {
     unset($_SESSION['admin_logged_in'], $_SESSION['admin_last_activity']);
 }
 if (!empty($_SESSION['admin_logged_in'])) {
     $_SESSION['admin_last_activity'] = time();
+    $admin_must_change_password = !empty($_SESSION['admin_must_change_password']);
 }
 
 $error = '';
@@ -43,6 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (isset($_POST['login'])) {
         $username = isset($_POST['username']) && is_string($_POST['username']) ? $_POST['username'] : '';
         $password = isset($_POST['password']) && is_string($_POST['password']) ? $_POST['password'] : '';
+        $username_matches = hash_equals($admin_config['username'], $username);
         $password_matches = password_verify($password, $admin_config['password_hash']);
         $attempt_key = hash_hmac(
             'sha256',
@@ -75,7 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 $window_expired = !$attempt || (int) $attempt['window_expired'] === 1;
                 $attempt_count = $window_expired ? 0 : (int) $attempt['attempt_count'];
-                $authenticated = hash_equals($admin_config['username'], $username) && $password_matches;
+                $authenticated = $username_matches && $password_matches;
                 if ($authenticated) {
                     $clear_attempts = $pdo->prepare('DELETE FROM admin_login_attempts WHERE attempt_key = :attempt_key');
                     $clear_attempts->execute([':attempt_key' => $attempt_key]);
@@ -83,6 +86,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     session_regenerate_id(true);
                     $_SESSION['admin_logged_in'] = true;
                     $_SESSION['admin_last_activity'] = time();
+                    $_SESSION['admin_must_change_password'] = !empty($admin_config['must_change_password']);
                     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
                     header('Location: admin.php', true, 303);
                     exit;
@@ -113,6 +117,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             error_log('Bexxy admin login database error: ' . $exception->getMessage());
             http_response_code(503);
             $error = 'Sign-in is temporarily unavailable. Please try again later.';
+        }
+    } elseif (!empty($_SESSION['admin_logged_in']) && !empty($_SESSION['admin_must_change_password']) && isset($_POST['change_password'])) {
+        $new_password = isset($_POST['new_password']) && is_string($_POST['new_password'])
+            ? $_POST['new_password']
+            : '';
+        $confirm_password = isset($_POST['confirm_password']) && is_string($_POST['confirm_password'])
+            ? $_POST['confirm_password']
+            : '';
+        if (strlen($new_password) < 12 || strlen($new_password) > 1024) {
+            $error = 'Choose a password between 12 and 1,024 characters.';
+        } elseif (!hash_equals($new_password, $confirm_password)) {
+            $error = 'The new passwords do not match.';
+        } else {
+            try {
+                $config['admin']['password_hash'] = password_hash($new_password, PASSWORD_DEFAULT);
+                $config['admin']['must_change_password'] = false;
+                save_private_config($config);
+                $_SESSION['admin_must_change_password'] = false;
+                $admin_must_change_password = false;
+                $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+                $notice = 'Your password has been changed. Continue to the booking dashboard.';
+            } catch (RuntimeException $exception) {
+                error_log('Bexxy admin password update error: ' . $exception->getMessage());
+                http_response_code(503);
+                $error = 'Could not save your new password to the private config. Check that Apache can write to C:\\xampp\\private, then try again.';
+            }
         }
     } elseif (!empty($_SESSION['admin_logged_in']) && isset($_POST['logout'])) {
         $_SESSION = [];
@@ -259,17 +289,37 @@ $csrf_token = new_csrf_token();
                     <h1 id="admin-heading">Booking<br><span class="headline-accent">dashboard.</span></h1>
                     <p>Sign in with your private dashboard credentials to view booking requests.</p>
                 </div>
-                <form method="post" action="admin.php" class="form-grid">
+                <form method="post" action="admin.php" class="form-grid" autocomplete="off">
                     <input type="hidden" name="csrf_token" value="<?= escape_html($csrf_token) ?>">
                     <label class="form-field form-field-wide" for="admin-username">
                         <span>Username</span>
-                        <input id="admin-username" name="username" autocomplete="username" required>
+                        <input id="admin-username" name="username" autocomplete="off" required>
                     </label>
                     <label class="form-field form-field-wide" for="admin-password">
                         <span>Password</span>
-                        <input id="admin-password" name="password" type="password" autocomplete="current-password" required>
+                        <input id="admin-password" name="password" type="password" autocomplete="off" required>
                     </label>
                     <button class="button button-primary form-field-wide" type="submit" name="login" value="1">Sign in</button>
+                </form>
+            </section>
+        <?php elseif ($admin_must_change_password): ?>
+            <section class="admin-login booking-form" aria-labelledby="admin-password-heading">
+                <div class="booking-heading">
+                    <div class="eyebrow">One-time setup</div>
+                    <h1 id="admin-password-heading">Set your<br><span class="headline-accent">new password.</span></h1>
+                    <p>You signed in with a temporary password. Create a new password before viewing booking requests.</p>
+                </div>
+                <form method="post" action="admin.php" class="form-grid" autocomplete="off">
+                    <input type="hidden" name="csrf_token" value="<?= escape_html($csrf_token) ?>">
+                    <label class="form-field form-field-wide" for="new-admin-password">
+                        <span>New password (at least 12 characters)</span>
+                        <input id="new-admin-password" name="new_password" type="password" autocomplete="new-password" minlength="12" maxlength="1024" required>
+                    </label>
+                    <label class="form-field form-field-wide" for="confirm-admin-password">
+                        <span>Confirm new password</span>
+                        <input id="confirm-admin-password" name="confirm_password" type="password" autocomplete="new-password" minlength="12" maxlength="1024" required>
+                    </label>
+                    <button class="button button-primary form-field-wide" type="submit" name="change_password" value="1">Save new password</button>
                 </form>
             </section>
         <?php else: ?>

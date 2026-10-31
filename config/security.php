@@ -34,6 +34,17 @@ function private_config(): array
         return $config;
     }
 
+    $config = load_private_config();
+    return $config;
+}
+
+function private_config_path(): string
+{
+    static $resolved_path;
+    if (is_string($resolved_path)) {
+        return $resolved_path;
+    }
+
     $config_path = getenv('BEXXY_PRIVATE_CONFIG');
     $candidate_paths = [];
     if (is_string($config_path) && $config_path !== '') {
@@ -54,25 +65,49 @@ function private_config(): array
         }
     }
 
-    $config_path = null;
+    $resolved_path = null;
     foreach (array_values(array_unique($candidate_paths)) as $candidate) {
         if (is_file($candidate) && is_readable($candidate)) {
-            $config_path = $candidate;
+            $resolved_path = $candidate;
             break;
         }
     }
 
-    if ($config_path === null) {
+    if ($resolved_path === null) {
         throw new RuntimeException('Private configuration is missing or unreadable. Follow SETUP.md to create it outside the web root.');
     }
 
-    $loaded_config = require $config_path;
+    return $resolved_path;
+}
+
+function load_private_config(): array
+{
+    $loaded_config = require private_config_path();
     if (!is_array($loaded_config)) {
         throw new RuntimeException('Private configuration must return a PHP array.');
     }
 
-    $config = $loaded_config;
-    return $config;
+    return $loaded_config;
+}
+
+function save_private_config(array $config): void
+{
+    $contents = "<?php\ndeclare(strict_types=1);\n\nreturn " . var_export($config, true) . ";\n";
+    $path = private_config_path();
+    $temporary_path = $path . '.' . bin2hex(random_bytes(8)) . '.tmp';
+    if (file_put_contents($temporary_path, $contents, LOCK_EX) !== strlen($contents)) {
+        if (is_file($temporary_path) && !unlink($temporary_path)) {
+            error_log('Bexxy could not remove an incomplete temporary private config file.');
+        }
+        throw new RuntimeException('Could not write the updated private configuration.');
+    }
+    if (!rename($temporary_path, $path)) {
+        unlink($temporary_path);
+        throw new RuntimeException('Could not replace the private configuration file.');
+    }
+    if (function_exists('opcache_invalidate') && !opcache_invalidate($path, true)) {
+        error_log('Bexxy could not invalidate the cached private configuration after updating it.');
+    }
 }
 
 function new_csrf_token(): string

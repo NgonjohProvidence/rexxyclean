@@ -1,5 +1,4 @@
 # Run Bexxy locally with XAMPP
-
 This site uses PHP and MySQL/MariaDB. A booking request is saved to the database; it is not a confirmed appointment and no payment is taken.
 
 ## Install in XAMPP
@@ -46,6 +45,8 @@ This site uses PHP and MySQL/MariaDB. A booking request is saved to the database
    Now open `http://localhost/rexxyclean/admin.php`. Sign in with username `admin` and the **Password** value you saved. If the dashboard says it is not configured, check that the filename is exactly `bexxy-config.php`, it is inside `C:\xampp\private`, and you replaced both the `password_hash` and `rate_limit_key` placeholders. If login says the username or password was not recognized, check that you used the plain **Password** value (not the hash) and that the hash was copied correctly.
 
    You can leave the `notifications` email placeholders unchanged for now; they only need real values when you set up booking emails. Keep the password, hash, random key, and private config file out of `htdocs`, Git, and public messages. Do not send them to anyone.
+
+   If you cannot sign in, open `http://localhost/rexxyclean/admin-password-reset.php` on this computer and generate a temporary password. Sign in at `admin.php`; the dashboard will require you to choose and save a new password (at least 12 characters) before showing booking requests. Afterward, delete `admin-password-reset.php` from `C:\xampp\htdocs\rexxyclean`. This reset page is local-computer-only and should not be left in the project when the website is deployed publicly.
 7. To enable booking emails, choose a mail provider and configure its SMTP relay in XAMPP's `sendmail.ini` (including credentials stored only on your computer). Set PHP's `sendmail_path` in `php.ini` to the XAMPP Sendmail executable, then restart Apache. Keep provider credentials private; a successful PHP `mail()` result does not guarantee inbox delivery.
 8. Open `http://localhost/bexxy/` (Apache will load `index.php`; do not open the site as a `file:///` URL).
    Apache's rewrite rules in `.htaccess` serve the custom 404 page for missing paths whether the project is installed at the document root or in a subdirectory. If the custom page does not appear on your host, make sure Apache's `mod_rewrite` module is enabled.
@@ -58,7 +59,7 @@ The app looks for the private config at `C:\xampp\private\bexxy-config.php`. To 
 
 - Server-side validation, prepared SQL statements, HTML output escaping, CSRF protection, secure session-cookie settings, a hidden spam trap, and a minimum form-completion time.
 - English/French language switch on the public pages. The visitor's choice is saved in the browser and reused on the next visit; English is the default.
-- A private staff dashboard at `admin.php` with a username/password sign-in form, password-hash authentication, session timeout, database-backed login throttling keyed by an HMAC of the username and client IP, CSRF-protected status changes, private team notes, status filtering, and paginated requests. The example configuration uses `admin` as the initial username; generate a unique password during setup.
+- A private staff dashboard at `admin.php` with a username/password sign-in form, password-hash authentication, session timeout, database-backed login throttling keyed by an HMAC of the username and client IP, CSRF-protected status changes, private team notes, status filtering, and paginated requests. The example configuration uses `admin` as the initial username; generate a unique password during setup. If reset, the dashboard requires a password change before showing booking data.
 - A PDF **booking request receipt** downloadable in the browser session that submitted the form. It contains personal information and should be treated as private. It is not an invoice, payment receipt, or confirmation.
 - Booking submissions attempt to send a customer acknowledgement and a new-request email to the configured business address via PHP's `mail()` transport. Configure a mail provider and valid notification addresses before enabling email. A successful `mail()` result is not a guarantee of inbox delivery. The acknowledgement explicitly says the appointment is not yet confirmed.
 - Pricing is defined in `pricing.json`: each `per_hour` value is CAD per cleaner-hour, and extras can have a fixed rate or `null` for a custom quote. The configured hourly amounts are provisional estimates, not an official local standard; review and edit them before advertising.
