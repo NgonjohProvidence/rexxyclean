@@ -16,6 +16,18 @@ if (!empty($_SESSION['admin_logged_in'])) {
 $error = '';
 $notice = '';
 $status_options = ['pending', 'contacted', 'confirmed', 'completed', 'cancelled'];
+$dashboard_stats = [
+    'total' => 0,
+    'pending' => 0,
+    'contacted' => 0,
+    'confirmed' => 0,
+    'completed' => 0,
+    'cancelled' => 0,
+    'today' => 0,
+];
+$monthly_bookings = [];
+$service_analytics = [];
+$estimated_value_by_currency = [];
 
 try {
     $config = private_config();
@@ -160,6 +172,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $status_filter = isset($_POST['status_filter']) && is_string($_POST['status_filter'])
             ? $_POST['status_filter']
             : 'all';
+        $search_query = isset($_POST['search_query']) && is_string($_POST['search_query'])
+            ? trim($_POST['search_query'])
+            : '';
+        if (function_exists('mb_substr')) {
+            $search_query = mb_substr($search_query, 0, 100, 'UTF-8');
+        } else {
+            $search_query = substr($search_query, 0, 100);
+        }
         if (!$booking_id || $booking_id < 1 || !in_array($status, $status_options, true)) {
             $error = 'Choose a valid request and status.';
         } elseif ((function_exists('mb_strlen') ? mb_strlen($internal_notes, 'UTF-8') : strlen($internal_notes)) > 3000) {
@@ -186,10 +206,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 if ($error === '') {
                     $_SESSION['admin_notice'] = 'Booking #' . $booking_id . ' updated.';
-                    $redirect_filter = in_array($status_filter, $status_options, true)
-                        ? '?status=' . rawurlencode($status_filter)
-                        : '';
-                    header('Location: admin.php' . $redirect_filter, true, 303);
+                    $redirect_parameters = [];
+                    if (in_array($status_filter, $status_options, true)) {
+                        $redirect_parameters['status'] = $status_filter;
+                    }
+                    if ($search_query !== '') {
+                        $redirect_parameters['q'] = $search_query;
+                    }
+                    if (isset($_POST['today_only']) && $_POST['today_only'] === '1') {
+                        $redirect_parameters['today'] = '1';
+                    }
+                    $redirect_query = $redirect_parameters ? '?' . http_build_query($redirect_parameters) : '';
+                    header('Location: admin.php' . $redirect_query, true, 303);
                     exit;
                 }
             } catch (PDOException $exception) {
@@ -206,35 +234,131 @@ if (isset($_SESSION['admin_notice']) && is_string($_SESSION['admin_notice'])) {
 }
 
 $bookings = [];
+$total = 0;
+$search_query = isset($_GET['q']) && is_string($_GET['q']) ? trim($_GET['q']) : '';
+if (function_exists('mb_substr')) {
+    $search_query = mb_substr($search_query, 0, 100, 'UTF-8');
+} else {
+    $search_query = substr($search_query, 0, 100);
+}
 $page = isset($_GET['page']) && is_string($_GET['page']) ? filter_var($_GET['page'], FILTER_VALIDATE_INT) : 1;
 $page = $page && $page > 0 ? min($page, 1000000) : 1;
 $status_filter = isset($_GET['status']) && is_string($_GET['status']) ? $_GET['status'] : 'all';
 if ($status_filter !== 'all' && !in_array($status_filter, $status_options, true)) {
     $status_filter = 'all';
 }
+$today_only = isset($_GET['today']) && $_GET['today'] === '1';
 $page_size = 25;
 $total_pages = 1;
 if (!empty($_SESSION['admin_logged_in'])) {
     try {
         $pdo = require __DIR__ . '/config/database.php';
-        if ($status_filter === 'all') {
-            $total = (int) $pdo->query('SELECT COUNT(*) FROM booking_requests')->fetchColumn();
-        } else {
-            $count_statement = $pdo->prepare('SELECT COUNT(*) FROM booking_requests WHERE status = :status');
-            $count_statement->execute([':status' => $status_filter]);
-            $total = (int) $count_statement->fetchColumn();
+        $stats_statement = $pdo->query(
+            "SELECT COUNT(*) AS total,
+                    COALESCE(SUM(status = 'pending'), 0) AS pending,
+                    COALESCE(SUM(status = 'contacted'), 0) AS contacted,
+                    COALESCE(SUM(status = 'confirmed'), 0) AS confirmed,
+                    COALESCE(SUM(status = 'completed'), 0) AS completed,
+                    COALESCE(SUM(status = 'cancelled'), 0) AS cancelled,
+                    COALESCE(SUM(status = 'confirmed' AND preferred_date = CURRENT_DATE()), 0) AS today
+             FROM booking_requests"
+        );
+        $dashboard_stats = $stats_statement->fetch();
+        $dashboard_stats = array_map('intval', $dashboard_stats);
+
+        $month_start = date('Y-m-01', strtotime('-5 months'));
+        $month_end = date('Y-m-01', strtotime('+1 month'));
+        $monthly_statement = $pdo->prepare(
+            "SELECT DATE_FORMAT(created_at, '%Y-%m') AS booking_month, COUNT(*) AS booking_count
+             FROM booking_requests
+             WHERE created_at >= :month_start AND created_at < :month_end
+             GROUP BY DATE_FORMAT(created_at, '%Y-%m')
+             ORDER BY booking_month"
+        );
+        $monthly_statement->execute([
+            ':month_start' => $month_start,
+            ':month_end' => $month_end,
+        ]);
+        $monthly_counts = [];
+        foreach ($monthly_statement->fetchAll() as $month_row) {
+            $monthly_counts[(string) $month_row['booking_month']] = (int) $month_row['booking_count'];
         }
+        for ($month_offset = 5; $month_offset >= 0; $month_offset--) {
+            $month_timestamp = strtotime(date('Y-m-01') . ' -' . $month_offset . ' months');
+            $month_key = date('Y-m', $month_timestamp);
+            $monthly_bookings[] = [
+                'label' => date('M', $month_timestamp),
+                'count' => $monthly_counts[$month_key] ?? 0,
+            ];
+        }
+        $monthly_maximum = 0;
+        foreach ($monthly_bookings as $month_row) {
+            $monthly_maximum = max($monthly_maximum, $month_row['count']);
+        }
+
+        $service_statement = $pdo->query(
+            'SELECT service, COUNT(*) AS booking_count
+             FROM booking_requests
+             GROUP BY service
+             ORDER BY booking_count DESC, service ASC
+             LIMIT 5'
+        );
+        $service_analytics = $service_statement->fetchAll();
+        $service_maximum = 0;
+        foreach ($service_analytics as $service_row) {
+            $service_maximum = max($service_maximum, (int) $service_row['booking_count']);
+        }
+        foreach ($service_analytics as &$service_row) {
+            $service_row['booking_count'] = (int) $service_row['booking_count'];
+            $service_row['percentage'] = $service_maximum > 0
+                ? (int) round($service_row['booking_count'] / $service_maximum * 100)
+                : 0;
+        }
+        unset($service_row);
+
+        $value_statement = $pdo->query(
+            "SELECT currency_code, COUNT(*) AS booking_count, COALESCE(SUM(estimated_total), 0) AS estimated_total
+             FROM booking_requests
+             WHERE status IN ('confirmed', 'completed') AND estimated_total IS NOT NULL
+             GROUP BY currency_code
+             ORDER BY currency_code"
+        );
+        $estimated_value_by_currency = $value_statement->fetchAll();
+
+        $booking_conditions = [];
+        $booking_parameters = [];
+        if ($status_filter !== 'all') {
+            $booking_conditions[] = 'status = :status';
+            $booking_parameters[':status'] = $status_filter;
+        }
+        if ($today_only) {
+            $booking_conditions[] = 'preferred_date = CURRENT_DATE()';
+        }
+        if ($search_query !== '') {
+            $search_like = '%' . strtr($search_query, ['!' => '!!', '%' => '!%', '_' => '!_']) . '%';
+            $booking_conditions[] = "(full_name LIKE :search_name ESCAPE '!'
+                OR email LIKE :search_email ESCAPE '!'
+                OR phone LIKE :search_phone ESCAPE '!'
+                OR service LIKE :search_service ESCAPE '!'
+                OR service_address LIKE :search_address ESCAPE '!'
+                OR CAST(id AS CHAR) LIKE :search_id ESCAPE '!')";
+            foreach (['name', 'email', 'phone', 'service', 'address', 'id'] as $field) {
+                $booking_parameters[':search_' . $field] = $search_like;
+            }
+        }
+
+        $where_clause = $booking_conditions ? ' WHERE ' . implode(' AND ', $booking_conditions) : '';
+        $count_statement = $pdo->prepare('SELECT COUNT(*) FROM booking_requests' . $where_clause);
+        $count_statement->execute($booking_parameters);
+        $total = (int) $count_statement->fetchColumn();
         $total_pages = max(1, (int) ceil($total / $page_size));
         $page = min($page, $total_pages);
         $booking_sql = 'SELECT id, service, rooms, estimated_hours, cleaner_count, preferred_date, arrival_time, extra_services, estimated_total, currency_code, full_name, email, phone, service_address, notes, internal_notes, status, created_at
-                        FROM booking_requests';
-        if ($status_filter !== 'all') {
-            $booking_sql .= ' WHERE status = :status';
-        }
+                        FROM booking_requests' . $where_clause;
         $booking_sql .= ' ORDER BY created_at DESC, id DESC LIMIT :limit OFFSET :offset';
         $statement = $pdo->prepare($booking_sql);
-        if ($status_filter !== 'all') {
-            $statement->bindValue(':status', $status_filter, PDO::PARAM_STR);
+        foreach ($booking_parameters as $parameter => $value) {
+            $statement->bindValue($parameter, $value, PDO::PARAM_STR);
         }
         $statement->bindValue(':limit', $page_size, PDO::PARAM_INT);
         $statement->bindValue(':offset', ($page - 1) * $page_size, PDO::PARAM_INT);
@@ -326,24 +450,178 @@ $csrf_token = new_csrf_token();
             <div class="admin-heading">
                 <div>
                     <div class="eyebrow">Private area</div>
-                    <h1>Booking requests</h1>
-                    <p>Track each request from first contact through completion. Staff notes are private and never shown to customers.</p>
+                    <h1>Operations dashboard</h1>
+                    <p>Manage customer requests from first contact through completion. Team notes stay private.</p>
                 </div>
             </div>
-            <form class="admin-filter" method="get" action="admin.php">
-                <label class="form-field" for="booking-status-filter">
-                    <span>Show requests</span>
-                    <select id="booking-status-filter" name="status">
-                        <option value="all" <?= $status_filter === 'all' ? 'selected' : '' ?>>All statuses</option>
-                        <?php foreach ($status_options as $status): ?>
-                            <option value="<?= escape_html($status) ?>" <?= $status_filter === $status ? 'selected' : '' ?>><?= escape_html(ucfirst($status)) ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </label>
-                <button class="button button-dark" type="submit">Filter</button>
-            </form>
+            <section class="admin-overview" aria-label="Booking overview">
+                <a class="admin-stat" href="admin.php">
+                    <span class="admin-stat-label">All requests</span>
+                    <strong><?= $dashboard_stats['total'] ?></strong>
+                    <span class="admin-stat-foot">Across every status</span>
+                </a>
+                <a class="admin-stat admin-stat-pending" href="admin.php?status=pending">
+                    <span class="admin-stat-label">Needs attention</span>
+                    <strong><?= $dashboard_stats['pending'] ?></strong>
+                    <span class="admin-stat-foot">Awaiting first contact</span>
+                </a>
+                <a class="admin-stat admin-stat-confirmed" href="admin.php?status=confirmed">
+                    <span class="admin-stat-label">Confirmed</span>
+                    <strong><?= $dashboard_stats['confirmed'] ?></strong>
+                    <span class="admin-stat-foot">Scheduled requests</span>
+                </a>
+                <a class="admin-stat admin-stat-today" href="admin.php?status=confirmed&amp;today=1">
+                    <span class="admin-stat-label">Today</span>
+                    <strong><?= $dashboard_stats['today'] ?></strong>
+                    <span class="admin-stat-foot">Confirmed appointments</span>
+                </a>
+            </section>
+            <section class="admin-analytics" aria-label="Booking analytics">
+                <article class="admin-analytics-card admin-trend-card">
+                    <div class="admin-analytics-heading">
+                        <div>
+                            <div class="eyebrow">Demand</div>
+                            <h2>Booking trend</h2>
+                        </div>
+                        <span class="admin-analytics-caption">Last 6 months</span>
+                    </div>
+                    <?php if ($dashboard_stats['total'] === 0): ?>
+                        <p class="admin-analytics-empty">Booking activity will appear here when customers submit requests.</p>
+                    <?php else: ?>
+                        <div class="admin-month-chart" role="img" aria-label="Monthly booking requests over the last six months">
+                            <?php foreach ($monthly_bookings as $month_row): ?>
+                                <?php
+                                $month_height = $monthly_maximum > 0
+                                    ? max(4, (int) round($month_row['count'] / $monthly_maximum * 100))
+                                    : 4;
+                                ?>
+                                <div class="admin-month-column" aria-label="<?= escape_html($month_row['label']) ?>: <?= $month_row['count'] ?> requests">
+                                    <span class="admin-month-count"><?= $month_row['count'] ?></span>
+                                    <div class="admin-month-track">
+                                        <span class="admin-month-bar" style="height: <?= $month_height ?>%"></span>
+                                    </div>
+                                    <span class="admin-month-label"><?= escape_html($month_row['label']) ?></span>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+                </article>
+                <article class="admin-analytics-card">
+                    <div class="admin-analytics-heading">
+                        <div>
+                            <div class="eyebrow">Pipeline</div>
+                            <h2>Request status</h2>
+                        </div>
+                        <span class="admin-analytics-caption">All requests</span>
+                    </div>
+                    <?php if ($dashboard_stats['total'] === 0): ?>
+                        <p class="admin-analytics-empty">Status breakdown will appear here when requests arrive.</p>
+                    <?php else: ?>
+                        <div class="admin-breakdown">
+                            <?php foreach ($status_options as $status): ?>
+                                <?php
+                                $status_count = $dashboard_stats[$status];
+                                $status_percentage = (int) round($status_count / $dashboard_stats['total'] * 100);
+                                ?>
+                                <div class="admin-breakdown-row">
+                                    <div class="admin-breakdown-label">
+                                        <span><?= escape_html(ucfirst($status)) ?></span>
+                                        <span><?= $status_count ?> <span class="admin-breakdown-percent">(<?= $status_percentage ?>%)</span></span>
+                                    </div>
+                                    <div class="admin-breakdown-track">
+                                        <span class="admin-breakdown-bar admin-breakdown-<?= escape_html($status) ?>" style="width: <?= $status_percentage ?>%"></span>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+                </article>
+                <article class="admin-analytics-card">
+                    <div class="admin-analytics-heading">
+                        <div>
+                            <div class="eyebrow">Services</div>
+                            <h2>Most requested</h2>
+                        </div>
+                        <span class="admin-analytics-caption">Top 5</span>
+                    </div>
+                    <?php if (!$service_analytics): ?>
+                        <p class="admin-analytics-empty">Popular services will appear here when requests arrive.</p>
+                    <?php else: ?>
+                        <div class="admin-breakdown">
+                            <?php foreach ($service_analytics as $service_row): ?>
+                                <div class="admin-breakdown-row">
+                                    <div class="admin-breakdown-label">
+                                        <span><?= escape_html((string) $service_row['service']) ?></span>
+                                        <span><?= $service_row['booking_count'] ?></span>
+                                    </div>
+                                    <div class="admin-breakdown-track">
+                                        <span class="admin-breakdown-bar admin-service-bar" style="width: <?= $service_row['percentage'] ?>%"></span>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+                </article>
+                <article class="admin-analytics-card admin-value-card">
+                    <div class="admin-analytics-heading">
+                        <div>
+                            <div class="eyebrow">Confirmed work</div>
+                            <h2>Estimated value</h2>
+                        </div>
+                        <span class="admin-analytics-caption">Confirmed + completed</span>
+                    </div>
+                    <?php if (!$estimated_value_by_currency): ?>
+                        <p class="admin-analytics-empty">There is no estimated value for confirmed or completed requests yet.</p>
+                    <?php else: ?>
+                        <div class="admin-value-list">
+                            <?php foreach ($estimated_value_by_currency as $value_row): ?>
+                                <?php $value_decimals = $value_row['currency_code'] === 'CAD' ? 2 : 0; ?>
+                                <div class="admin-value-row">
+                                    <span class="admin-value-currency"><?= escape_html((string) $value_row['currency_code']) ?></span>
+                                    <strong><?= escape_html(number_format((float) $value_row['estimated_total'], $value_decimals)) ?></strong>
+                                    <span class="admin-value-count"><?= (int) $value_row['booking_count'] ?> request<?= (int) $value_row['booking_count'] === 1 ? '' : 's' ?></span>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                        <p class="admin-value-note">Estimates only—not collected revenue or invoices.</p>
+                    <?php endif; ?>
+                </article>
+            </section>
+            <section class="admin-workspace" aria-labelledby="requests-heading">
+                <div class="admin-workspace-heading">
+                    <div>
+                        <div class="eyebrow">Bookings</div>
+                        <h2 id="requests-heading">Customer requests</h2>
+                    </div>
+                    <span class="admin-results-count"><?= number_format($total) ?> result<?= $total === 1 ? '' : 's' ?></span>
+                </div>
+                <form class="admin-filter" method="get" action="admin.php" role="search">
+                    <?php if ($today_only): ?>
+                        <input type="hidden" name="today" value="1">
+                    <?php endif; ?>
+                    <label class="form-field admin-search-field" for="booking-search">
+                        <span>Search requests</span>
+                        <input id="booking-search" name="q" type="search" value="<?= escape_html($search_query) ?>" maxlength="100" placeholder="Name, email, phone or request #">
+                    </label>
+                    <label class="form-field admin-status-filter" for="booking-status-filter">
+                        <span>Status</span>
+                        <select id="booking-status-filter" name="status">
+                            <option value="all" <?= $status_filter === 'all' ? 'selected' : '' ?>>All statuses</option>
+                            <?php foreach ($status_options as $status): ?>
+                                <option value="<?= escape_html($status) ?>" <?= $status_filter === $status ? 'selected' : '' ?>><?= escape_html(ucfirst($status)) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </label>
+                    <button class="button button-dark" type="submit">Search</button>
+                    <?php if ($search_query !== '' || $status_filter !== 'all' || $today_only): ?>
+                        <a class="admin-clear-filter" href="admin.php">Clear</a>
+                    <?php endif; ?>
+                </form>
             <?php if (!$bookings): ?>
-                <div class="admin-empty"><?= $status_filter === 'all' ? 'No booking requests yet.' : 'No requests currently have this status.' ?></div>
+                <div class="admin-empty">
+                    <strong><?= $search_query !== '' || $status_filter !== 'all' || $today_only ? 'No matching requests.' : 'Your dashboard is ready.' ?></strong>
+                    <span><?= $search_query !== '' || $status_filter !== 'all' || $today_only ? 'Try another search or clear the filters.' : 'New customer booking requests will appear here as soon as they are submitted on your website.' ?></span>
+                </div>
             <?php else: ?>
                 <div class="admin-bookings">
                     <?php foreach ($bookings as $booking): ?>
@@ -383,6 +661,10 @@ $csrf_token = new_csrf_token();
                                 <input type="hidden" name="csrf_token" value="<?= escape_html($csrf_token) ?>">
                                 <input type="hidden" name="booking_id" value="<?= (int) $booking['id'] ?>">
                                 <input type="hidden" name="status_filter" value="<?= escape_html($status_filter) ?>">
+                                <input type="hidden" name="search_query" value="<?= escape_html($search_query) ?>">
+                                <?php if ($today_only): ?>
+                                    <input type="hidden" name="today_only" value="1">
+                                <?php endif; ?>
                                 <label class="form-field" for="status-<?= (int) $booking['id'] ?>">
                                     <span>Update status</span>
                                     <select id="status-<?= (int) $booking['id'] ?>" name="status">
@@ -402,16 +684,31 @@ $csrf_token = new_csrf_token();
                 </div>
                 <?php if ($total_pages > 1): ?>
                     <nav class="admin-pagination" aria-label="Booking request pages">
+                        <?php
+                        $page_parameters = [];
+                        if ($status_filter !== 'all') {
+                            $page_parameters['status'] = $status_filter;
+                        }
+                        if ($search_query !== '') {
+                            $page_parameters['q'] = $search_query;
+                        }
+                        if ($today_only) {
+                            $page_parameters['today'] = '1';
+                        }
+                        ?>
                         <?php if ($page > 1): ?>
-                            <a class="button button-dark" href="admin.php?page=<?= $page - 1 ?><?= $status_filter === 'all' ? '' : '&amp;status=' . rawurlencode($status_filter) ?>">Newer requests</a>
+                            <?php $page_parameters['page'] = $page - 1; ?>
+                            <a class="button button-dark" href="admin.php?<?= escape_html(http_build_query($page_parameters)) ?>">Newer requests</a>
                         <?php endif; ?>
                         <span>Page <?= $page ?> of <?= $total_pages ?></span>
                         <?php if ($page < $total_pages): ?>
-                            <a class="button button-dark" href="admin.php?page=<?= $page + 1 ?><?= $status_filter === 'all' ? '' : '&amp;status=' . rawurlencode($status_filter) ?>">Older requests</a>
+                            <?php $page_parameters['page'] = $page + 1; ?>
+                            <a class="button button-dark" href="admin.php?<?= escape_html(http_build_query($page_parameters)) ?>">Older requests</a>
                         <?php endif; ?>
                     </nav>
                 <?php endif; ?>
             <?php endif; ?>
+            </section>
         <?php endif; ?>
     </main>
     <script src="navigation.js" defer></script>
